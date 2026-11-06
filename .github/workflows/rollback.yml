@@ -1,0 +1,39 @@
+name: Rollback
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to roll back
+        required: true
+        type: choice
+        options: [dev, prod]
+      version:
+        description: Lambda version to roll back to (leave blank for the previous one)
+        required: false
+        type: string
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  rollback:
+    name: Roll back ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Point the live alias at an earlier version
+        env:
+          FN: agent-ops-${{ inputs.environment }}
+          TARGET: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          CURRENT=$(aws lambda get-alias --function-name "$FN" --name live --query FunctionVersion --output text)
+          if [ -z "$TARGET" ]; then TARGET=$((CURRENT - 1)); fi
+          if [ "$TARGET" -lt 1 ]; then echo "There is no earlier version to roll back to."; exit 1; fi
+          aws lambda get-function --function-name "$FN" --qualifier "$TARGET" > /dev/null
+          aws lambda update-alias --function-name "$FN" --name live --function-version "$TARGET" > /dev/null
+          echo "Rolled back $FN: live alias moved from v$CURRENT to v$TARGET" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Next: revert the bad commit on main so Terraform and the alias agree again." | tee -a "$GITHUB_STEP_SUMMARY"
