@@ -9,7 +9,7 @@ price_output_per_mtok = 5
 daily_cost_alarm_usd  = 0.5
 
 # Day 3: switched on here first. Day 5: switched off here and on in prod.
-traffic_enabled = false
+traffic_enabled = true
 
 # Day 7: fill these in to switch on Entra ID authentication
 entra_tenant_id     = ""
