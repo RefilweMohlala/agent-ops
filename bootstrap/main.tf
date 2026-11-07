@@ -18,7 +18,7 @@ variable "region" {
 variable "github_repo" {
   description = "owner/repo that is allowed to deploy"
   type        = string
-  default     = "RefilweMohlala/agent-ops"
+  default     = "RefilweMohlala@137580345/agent-ops@1425805946"
 }
 
 variable "alert_email" {
