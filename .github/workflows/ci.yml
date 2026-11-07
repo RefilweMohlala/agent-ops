@@ -1,0 +1,48 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  id-token: write # needed to request the OIDC token for AWS
+  contents: read
+jobs:
+  checks:
+    name: Tests and AI eval gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: for f in src/*.mjs traffic/*.mjs evals/*.mjs; do node --check "$f"; done
+      - name: Unit tests
+        run: node --test tests/*.test.mjs
+      - name: AI eval gate
+        if: hashFiles('evals/cases.json') != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODEL_ID: ${{ vars.MODEL_ID }}
+          EVAL_THRESHOLD: "0.85"
+        run: node evals/run-eval.mjs
+  plan:
+    name: Terraform plan (dev)
+    needs: checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -input=false
+      - run: terraform workspace select -or-create=true dev
+      - run: terraform validate
+      - run: terraform plan -input=false -lock=false -var-file=env/dev.tfvars
