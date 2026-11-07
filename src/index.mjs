@@ -80,7 +80,6 @@ async function handleStatus(event) {
   const params = await getParams();
   return json(200, {
     env: process.env.ENV,
-    build: "day5-drill",
     functionVersion: process.env.AWS_LAMBDA_FUNCTION_VERSION,
     promptVersion: PROMPT_VERSION,
     modelId: params.modelId,
