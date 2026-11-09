@@ -12,5 +12,5 @@ daily_cost_alarm_usd  = 0.5
 traffic_enabled = false
 
 # Day 7: fill these in to switch on Entra ID authentication
-entra_tenant_id     = ""
-entra_api_client_id = ""
+entra_tenant_id     = "6e1c4756-1ad1-45f5-8381-7bace667945b"
+entra_api_client_id = "03ceda34-08f3-4085-a547-8a115e37e9d5"
