@@ -1,6 +1,6 @@
 # Agent Ops: running an AI support agent like a production service
 
-A member-support triage agent for an airport-lounge access programme, built to show the **operational layer** that makes AI safe to run in a business: identity and access control, secrets, infrastructure-as-code, deployment controls, rollback, monitoring and SLOs, live quality and cost tracking, failure recovery, runbooks, and two weeks of actual operation.
+A member-support triage agent for an airport-lounge access programme, built to show the **operational layer** that makes AI safe to run in a business: identity and access control, secrets, infrastructure-as-code, deployment controls, rollback, monitoring and SLOs, live quality and cost tracking, failure recovery, runbooks, and six days of actual operation.
 
 > Portfolio project with synthetic data and simulated traffic. It is designed and operated the way I would run it in production, but it has no real users.
 
@@ -34,28 +34,21 @@ flowchart LR
    gh[GitHub Actions] -->|OIDC, no stored keys| aws[Terraform apply<br/>dev → approval → prod]
 ```
 
-## Operational controls
+   ## Operations record
 
-| Control | How |
-|---|---|
-| Environments | dev and prod: same Terraform, separate workspaces and state |
-| Deployment | PR, then unit tests + **AI eval gate** + `terraform plan`, then merge, dev, **manual approval**, prod |
-| Rollback | Lambda versions behind a `live` alias. One-click Rollback workflow (drilled: about a minute, no rebuild) |
-| Credentials | GitHub to AWS via OIDC with no stored keys. Claude, Salesforce and Entra secrets only in Secrets Manager (or GitHub secrets for CI), never in code or state. One Claude key per environment |
-| Access control | Entra app roles: `Agent.Operator` (triage, feedback), `Agent.Viewer` (status only). One identity per system. API Gateway validates the JWT (401), the Lambda enforces the role (403) |
-| Kill switch | `/agent-ops/<env>/ai_enabled = false` sends every message to a human within about 35 seconds (drilled) |
-| SLOs | 99% success (6h), p90 latency under 10s. See [docs/SLOS.md](docs/SLOS.md) |
-| Monitoring | Dashboard and alarms: SLOs, errors, invalid AI output, CRM failures, DLQ, denied access, kill switch, canary |
-| AI quality | Offline: 20 labelled cases gate every deploy (at least 85% accuracy, all risks flagged, prompt-injection case included). Online: live accuracy from reviewer feedback and human-review rate, both alarmed |
-| Cost | Estimated cost per triage (about $0.0014), daily cost widget and alarm, AWS budget alert, spend limit per Anthropic key |
-| Reliability | Salesforce failures queued and retried; DLQ, alarm and replay procedure |
-| Data protection | Redaction before AI, CRM, queue and logs. Logs never contain message text. UK region (eu-west-2) |
-| Lifecycle | Prompt versioned in git (`triage-v1`), shown on `/status` and every Case |
-| Drills | Revoked Claude key, Salesforce validation rule, rollback, kill switch, and a sabotaged prompt blocked by CI. Reports in [docs/incidents](docs/incidents) |
+   Production ran with synthetic traffic and simulated reviewer feedback from 7 Nov 2026 (about 08:15 SAST) to 13 Nov 2026 (13:19 SAST), about six days. Full report: [docs/OPERATIONS-REPORT.md](docs/OPERATIONS-REPORT.md).
 
-The eval gate blocking a deliberately broken prompt:
-
-![Eval gate blocking a sabotaged prompt](docs/images/eval-gate-blocked.png)
+   | Measure | Result | Target |
+   |---|---|---|
+   | Requests triaged | 628 | |
+   | Success rate | 99.84% | 99% |
+   | p90 latency | 4.75 s | under 10 s |
+   | Sent to human review | 123 (19.6%), all for risk flags | under 50% |
+   | Live accuracy | 95.9% (627 reviews) | 80% |
+   | Salesforce Cases | 580 created (21 recovered through the retry queue), 0 dead-lettered | |
+   | AI cost | $0.90, about $0.0014 per triage | under $7 a week |
+   | Incidents | 1 unplanned (provider 503), 1 drill, 1 recurring alarm-noise finding | |
+   | Deployments | 6, all green | |
 
 ## Operations record
 
